@@ -1,0 +1,90 @@
+# This corner case has a list and and sorrounding object on the same indention level, only because of this there is a code to skip dedents
+
+dependency:
+- conditions:
+  - key: H01
+    op: eq
+    target: 4
+  result:
+    values:
+      min: 17
+      max: 30
+      step: 1
+      func: tempCelsius
+
+dependency = [
+  { 
+    conditions: [ { key: H01, op: eq, target: 4 } ],
+    result: {
+      values: {
+        min: 17,
+        max: 30,
+        step: 1,
+        func: tempCelsius
+      }
+    }
+  }
+]
+    
+- conditions:
+  - key: H01
+    op: eq
+    target: 4
+  result:
+    values:
+      min: 17
+      max: 30
+      step: 1
+      func: tempCelsius
+
+
+
+
+id	'dependency'
+:	':'
+-	'-'
+space	' '
+id	'conditions'
+:	':'
+indent	'        '
+-	'-'
+space	' '
+id	'key'
+:	':'
+space	' '
+string	'H01'
+indent	'          '
+id	'op'
+:	':'
+space	' '
+string	'eq'
+id	'target'
+:	':'
+space	' '
+int	'4'
+dedent	''
+id	'result'
+:	':'
+indent	'          '
+id	'values'
+:	':'
+indent	'            '
+id	'min'
+:	':'
+space	' '
+int	'17'
+id	'max'
+:	':'
+space	' '
+int	'30'
+id	'step'
+:	':'
+space	' '
+int	'1'
+id	'func'
+:	':'
+space	' '
+string	'tempCelsius'
+dedent	''
+dedent	''
+dedent	''
