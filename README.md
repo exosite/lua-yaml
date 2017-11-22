@@ -17,9 +17,9 @@ LUA YAML parser, based on [js-lua](https://github.com/tj/js-yaml/) , fast and ti
   * Extended bools (enabled, disabled, yes, no, on, off, true, false)
 
 # Testing
-Update git submodules and run:
+Install busted `luarocks install busted` and run:
 
-    $ make test
+    $ busted
 
 # License
 (The MIT License)

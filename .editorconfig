@@ -1,0 +1,28 @@
+; .editorconfig
+
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 2
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+max_preserve_newlines = 2
+
+[**.js]
+indent_style = tab
+
+[**.html]
+indent_style = tab
+
+[**.css]
+indent_style = tab
+max_preserve_newlines = 10
+newline_between_rules = true
+selector_separator_newline = true
+
+[*.md]
+insert_final_newline = false
+trim_trailing_whitespace = false
