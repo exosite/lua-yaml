@@ -1,28 +1,51 @@
 local Parser,tokens,context;
 
-function table_print (tt, indent, done)
-  done = done or {}
+function table_print(tt)
+  print('return '..table_print_value(tt))
+end
+
+function table_print_value(value, indent, done)
   indent = indent or 0
-  if type(tt) == "table" then
-    for key, value in pairs (tt) do
-      io.write(string.rep (" ", indent)) -- indent it
-      if type (value) == "table" and not done [value] then
-        done [value] = true
-        io.write(string.format("[%s] => table\n", tostring (key)));
-        io.write(string.rep (" ", indent+4)) -- indent it
-        io.write("(\n");
-        table_print (value, indent + 7, done)
-        io.write(string.rep (" ", indent+4)) -- indent it
-        io.write(")\n");
-      else
-        io.write(string.format("[%s] => %s\n",
-            tostring (key), tostring(value)))
-      end
+  done = done or {}
+  if type(value) == "table" and not done [value] then
+    done [value] = true
+    
+    local rep = "{\n"
+    local last
+    for key in pairs (value) do
+      last = key
     end
-  else
-    io.write(type(tt) .. ": " .. tostring(tt) .. "\n")
+    
+    local comma
+    for key, value2 in pairs (value) do
+      if key == last then
+        comma = ''
+      else
+        comma = ','
+      end
+      local keyRep
+      if type(key) == "number" then 
+        keyRep = key 
+      else 
+        keyRep = string.format("%q", tostring(key)) 
+      end
+      rep = rep .. string.format(
+        "%s[%s] = %s%s\n", 
+        string.rep(" ", indent + 7),
+        keyRep,
+        table_print_value(value2, indent + 7, done),
+        comma
+      )
+    end
+    
+    rep = rep .. string.rep (" ", indent+4) -- indent it
+    rep = rep .. "}"
+    return rep
+  elseif type(value) == "string" then
+    return string.format("%q", value)
+  else 
+    return tostring(value)
   end
-  io.flush()
 end
 
 function first(stack)
@@ -360,11 +383,10 @@ Parser.parseInlineHash = function (self)
 end
 
 Parser.parseList = function (self)
-  local list;
-  list = {}
+  local list = {}
   while self:accept("-") do
     self:ignoreSpace();
-    push(list, self:parse())
+    list[#list + 1] = self:parse()
 
     self:ignoreSpace()
   end
@@ -382,7 +404,7 @@ Parser.parseInlineList = function (self)
     end
 
     self:ignoreSpace()
-    push(list, self:parse())
+    list[#list + 1] = self:parse()
     self:ignoreSpace()
     i = i + 1
   end

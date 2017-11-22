@@ -16,10 +16,14 @@ LUA YAML parser, based on [js-lua](https://github.com/tj/js-yaml/) , fast and ti
   * Primitive scalars (integers, floats, booleans, etc)
   * Extended bools (enabled, disabled, yes, no, on, off, true, false)
 
-# Testing
-Update git submodules and run:
+## Installation
 
-    $ make test
+    $ luarocks install lua-yaml
+
+# Testing
+Install busted `luarocks install busted` and run:
+
+    $ busted
 
 # License
 (The MIT License)
