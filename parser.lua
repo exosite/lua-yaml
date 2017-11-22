@@ -1,10 +1,10 @@
 local yaml = require('yaml')
 
 function readAll(file)
-    local f = io.open(file, "rb")
-    local content = f:read("*all")
-    f:close()
-    return content
+  local f = io.open(file, "rb")
+  local content = f:read("*all")
+  f:close()
+  return content
 end
 
 if not arg[2] then

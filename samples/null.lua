@@ -1,5 +1,5 @@
 return {
-       ["end"] = "test passed?",
-       ["notnull"] = true,
-       ["test"] = "A test for null values"
-    }
+  ["end"] = "test passed?",
+  ["notnull"] = true,
+  ["test"] = "A test for null values"
+}

@@ -2,24 +2,24 @@ require 'busted.runner'()
 local yaml = require('yaml')
 
 function scandir(directory)
-    local i, t, popen = 0, {}, io.popen
-    local pfile = popen('ls -a "'..directory..'"')
-    for filename in pfile:lines() do
-        local match = {filename:match('^(.+)%.lua$')}
-        if #match > 0 then
-          i = i + 1
-          t[i] = match[1]
-        end
+  local i, t, popen = 0, {}, io.popen
+  local pfile = popen('ls -a "'..directory..'"')
+  for filename in pfile:lines() do
+    local match = {filename:match('^(.+)%.lua$')}
+    if #match > 0 then
+      i = i + 1
+      t[i] = match[1]
     end
-    pfile:close()
-    return t
+  end
+  pfile:close()
+  return t
 end
 
 function readAll(file)
-    local f = io.open(file, "rb")
-    local content = f:read("*all")
-    f:close()
-    return content
+  local f = io.open(file, "rb")
+  local content = f:read("*all")
+  f:close()
+  return content
 end
 
 describe('Parsing in', function()
