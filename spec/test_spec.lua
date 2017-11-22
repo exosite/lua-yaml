@@ -22,28 +22,14 @@ function readAll(file)
     return content
 end
 
-function compare(data, answer)
-  if type(data) == 'table' then
-    for kk, vv in pairs(data) do
-      compare(vv, answer[kk])
-    end
-  else
-    it(tostring(data) .. ' should be ' .. tostring(answer), function()
-      assert.are.equal(data, answer)
-    end)
-  end
-end
-
-describe('Parse mix type in object', function()
+describe('Parsing in', function()
 
   local files = scandir("samples/")
--- Lua implementation of PHP scandir function
-
   for k, file in pairs(files) do
-    print(file)
-    local data = yaml.eval(readAll("samples/"..file..".yaml"))
-    local answer = require("samples."..file)
-    
-    compare(data, answer)
+    it(file, function()
+      local data = yaml.eval(readAll("samples/"..file..".yaml"))
+      local answer = require("samples."..file)
+      assert.are.same(answer, data)
+    end)
   end
 end)

@@ -68,6 +68,12 @@ function push(stack, item)
   stack[size(stack)] = item
 end
 
+function pop(stack)
+  local item = stack[size(stack) - 1]
+  stack[size(stack) - 1] = nil
+  return item
+end
+
 function shift(stack)
   local item = stack[0]
   local i = 0
@@ -89,7 +95,8 @@ end
 
 Parser = {}
 function Parser.new (self, tokens)
-  self.tokens = tokens;
+  self.tokens = tokens
+  self.parse_stack = {}
   return self
 end
 
@@ -115,14 +122,12 @@ tokens = {
   {[0]="null",      word("Null")},
   {[0]="null",      word("NULL")},
   {[0]="null",      word("~")},
-  {[0]="string",    "^\"(.-)\""},
-  {[0]="string",    "^'(.-)'"},
+  {[0]="string",    "^\"(.-)\"", force_text = true},
+  {[0]="string",    "^'(.-)'", force_text = true},
   {[0]="timestamp", "^(%d%d%d%d)-(%d%d?)-(%d%d?)%s+(%d%d?):(%d%d):(%d%d)"},
   {[0]="timestamp", "^(%d%d%d%d)-(%d%d?)-(%d%d?)%s+(%d%d?):(%d%d)"},
   {[0]="timestamp", "^(%d%d%d%d)-(%d%d?)-(%d%d?)%s+(%d%d?)"},
   {[0]="timestamp", "^(%d%d%d%d)-(%d%d?)-(%d%d?)"},
-  {[0]="float",     "^(%d+%.%d+)"},
-  {[0]="int",       "^(%d+)"},
   {[0]="doc",       "^%-%-%-"},
   {[0]=",",         "^,"},
   {[0]="string",    "^%b{} *[^,%c]+", noinline = true},
@@ -161,7 +166,7 @@ exports.tokenize = function (str)
       
       if #captures > 0 then
         captures.input = str:sub(0, 25)
-        token = {[0] = tokens[i][0], captures}
+        token = {[0] = tokens[i][0], captures, force_text = tokens[i].force_text}
         str = str:gsub(tokens[i][1], "", 1)
         
         if token[0] == "{" or token[0] == "[" then
@@ -170,12 +175,16 @@ exports.tokenize = function (str)
           -- Since id pattern contains last semi-colon we're re-adding it
           str = token[1][2] .. str
         elseif token[0] == "string" then
-          -- Joining strings
-          local prev = last(stack)
-          if prev[0] == "string" then
-            prev[1][1] = prev[1][1] .. token[1][1]
-            ignore = true
+          -- Finding numbers
+          local snip = token[1][1]
+          if not token.force_text then
+            if snip:match("^(%d+%.%d+)$") then
+              token[0] = "float"
+            elseif snip:match("^(%d+)$") then
+              token[0] = "int"
+            end
           end
+          
         elseif token[0] == "comment" then
           ignore = true;
         elseif token[0] == "indent" then
@@ -285,45 +294,50 @@ end
 
 Parser.parse = function (self)
   local result 
-  local indent = self:accept("indent")
-  local token = self:peek()
-  
-  if token[0] == "doc" then
+  local c = {
+    indent = self:accept("indent") and 1 or 0,
+    token = self:peek()
+  }
+  push(self.parse_stack, c)
+
+  if c.token[0] == "doc" then
     result = self:parseDoc()
-  elseif token[0] == "-" then
+  elseif c.token[0] == "-" then
     result = self:parseList()
-  elseif token[0] == "{" then
+  elseif c.token[0] == "{" then
     result = self:parseInlineHash()
-  elseif token[0] == "[" then
+  elseif c.token[0] == "[" then
     result = self:parseInlineList()
-  elseif token[0] == "id" then
+  elseif c.token[0] == "id" then
     result = self:parseHash()
-  elseif token[0] == "string" then
+  elseif c.token[0] == "string" then
     result = self:advanceValue()
-  elseif token[0] == "timestamp" then
+  elseif c.token[0] == "timestamp" then
     result = self:parseTimestamp()
-  elseif token[0] == "float" then
+  elseif c.token[0] == "float" then
     result = tonumber(self:advanceValue())
-  elseif token[0] == "int" then
+  elseif c.token[0] == "int" then
     result = tonumber(self:advanceValue())
-  elseif token[0] == "true" then
+  elseif c.token[0] == "true" then
     self:advanceValue();
     result = true
-  elseif token[0] == "false" then
+  elseif c.token[0] == "false" then
     self:advanceValue();
     result = false
-  elseif token[0] == "null" then
+  elseif c.token[0] == "null" then
     self:advanceValue();
     result = nil
   end
   
-  if indent then
-    if not self:peekType("dedent") and token[0] == "-" then
-      -- This corner case around list indention could need some review. (see edge_cases/list.yaml)
-    elseif self:peek() ~= nil then
-      self:expect("dedent", "last term "..token[0]..": '"..token[1][1].."' is not properly dedented")
+  local c = pop(self.parse_stack)
+  while c.indent > 0 do
+    c.indent = c.indent - 1
+    if self:peek() ~= nil then
+      local term = "term "..c.token[0]..": '"..c.token[1][1].."'"
+      self:expect("dedent", "last ".. term .." is not properly dedented")
     end
   end
+  
   return result
 end
 
@@ -333,22 +347,37 @@ Parser.parseDoc = function (self)
 end
 
 Parser.parseHash = function (self, hash)
-  if hash == nil then
-    hash = {}
+  hash = hash or {}
+  local indents = 0
+  local parent = self.parse_stack[size(self.parse_stack)-2]
+  
+  if parent ~= nil and parent.token[0] == "-" then
+    local id = self:advanceValue()
+    self:expect(":","expected semi-colon after id")
+    self:ignoreSpace()
+    if self:accept("indent") then
+      indents = indents + 1
+      hash[id] = self:parse()
+    else
+      hash[id] = self:parse()
+      if self:accept("indent") then
+        indents = indents + 1
+      end
+    end
+    self:ignoreSpace();
   end
+    
   while self:peekType("id") do
     local id = self:advanceValue()
     self:expect(":","expected semi-colon after id")
     self:ignoreSpace()
     hash[id] = self:parse()
-
-    -- self:ignoreWhitespace();
     self:ignoreSpace();
   end
   
-  if self:accept("indent") then
-    self:parseHash(hash)
-    self:expect("dedent","expected dedent after hash")
+  while indents > 0 do
+    self:expect("dedent", "expected dedent")
+    indents = indents - 1
   end
   
   return hash
@@ -385,7 +414,7 @@ end
 Parser.parseList = function (self)
   local list = {}
   while self:accept("-") do
-    self:ignoreSpace();
+    self:ignoreSpace()
     list[#list + 1] = self:parse()
 
     self:ignoreSpace()
