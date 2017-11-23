@@ -1,23 +1,20 @@
-local Parser,tokens,context;
-
-function table_print(tt)
-  print('return '..table_print_value(tt))
-end
-
-function table_print_value(value, indent, done)
+local table_print_value
+table_print_value = function(value, indent, done)
   indent = indent or 0
   done = done or {}
   if type(value) == "table" and not done [value] then
     done [value] = true
 
-    local rep = "{\n"
-    local last
+    local list = {}
     for key in pairs (value) do
-      last = key
+      list[#list + 1] = key
     end
+    table.sort(list)
+    local last = list[#list]
 
+    local rep = "{\n"
     local comma
-    for key, value2 in pairs (value) do
+    for _, key in ipairs (list) do
       if key == last then
         comma = ''
       else
@@ -31,15 +28,17 @@ function table_print_value(value, indent, done)
       end
       rep = rep .. string.format(
         "%s[%s] = %s%s\n",
-        string.rep(" ", indent + 7),
+        string.rep(" ", indent + 2),
         keyRep,
-        table_print_value(value2, indent + 7, done),
+        table_print_value(value[key], indent + 2, done),
         comma
       )
     end
 
-    rep = rep .. string.rep (" ", indent+4) -- indent it
+    rep = rep .. string.rep(" ", indent) -- indent it
     rep = rep .. "}"
+
+    done[value] = false
     return rep
   elseif type(value) == "string" then
     return string.format("%q", value)
@@ -48,43 +47,34 @@ function table_print_value(value, indent, done)
   end
 end
 
-function first(stack)
-  return stack[0]
+local table_print = function(tt)
+  print('return '..table_print_value(tt))
 end
 
-function last(stack)
-  return stack[size(stack)-1]
-end
-
-function size(stack)
-  if stack[0] then
-    return #stack+1
-  else
-    return 0
+local table_clone = function(t)
+  local clone = {}
+  for k,v in pairs(t) do
+    clone[k] = v
   end
+  return clone
 end
 
-function push(stack, item)
-  stack[size(stack)] = item
+local string_trim = function(s, what)
+  what = what or " "
+  return s:gsub("^[" .. what .. "]*(.-)["..what.."]*$", "%1")
 end
 
-function pop(stack)
-  local item = stack[size(stack) - 1]
-  stack[size(stack) - 1] = nil
+local push = function(stack, item)
+  stack[#stack + 1] = item
+end
+
+local pop = function(stack)
+  local item = stack[#stack]
+  stack[#stack] = nil
   return item
 end
 
-function shift(stack)
-  local item = stack[0]
-  local i = 0
-  while stack[i] ~= nil do
-    stack[i] = stack[i+1]
-    i = i + 1
-  end
-  return item
-end
-
-context = function (env, str)
+local context = function (str)
   if type(str) ~= "string" then
     return ""
   end
@@ -93,131 +83,138 @@ context = function (env, str)
   return ", near \"" .. str .. "\""
 end
 
-Parser = {}
+local Parser = {}
 function Parser.new (self, tokens)
   self.tokens = tokens
   self.parse_stack = {}
+  self.refs = {}
+  self.current = 0
   return self
 end
 
-exports = {}
-exports.version = "0.2.3";
+local exports = {version = "1.1"}
 
-word = function(w) return "^"..w.."[%s$%c]" end
+local word = function(w) return "^"..w.."[%s$%c]" end
 
-tokens = {
-  [0] =
-  {[0]="comment",   "^#[^\n]*"},
-  {[0]="indent",    "^\n( *)"},
-  {[0]="space",     "^ +",""},
-  {[0]="true",      word("enabled")},
-  {[0]="true",      word("true")},
-  {[0]="true",      word("yes")},
-  {[0]="true",      word("on")},
-  {[0]="false",     word("disabled")},
-  {[0]="false",     word("false")},
-  {[0]="false",     word("no")},
-  {[0]="false",     word("off")},
-  {[0]="null",      word("null")},
-  {[0]="null",      word("Null")},
-  {[0]="null",      word("NULL")},
-  {[0]="null",      word("~")},
-  {[0]="string",    "^\"(.-)\"", force_text = true},
-  {[0]="string",    "^'(.-)'", force_text = true},
-  {[0]="timestamp", "^(%d%d%d%d)-(%d%d?)-(%d%d?)%s+(%d%d?):(%d%d):(%d%d)"},
-  {[0]="timestamp", "^(%d%d%d%d)-(%d%d?)-(%d%d?)%s+(%d%d?):(%d%d)"},
-  {[0]="timestamp", "^(%d%d%d%d)-(%d%d?)-(%d%d?)%s+(%d%d?)"},
-  {[0]="timestamp", "^(%d%d%d%d)-(%d%d?)-(%d%d?)"},
-  {[0]="doc",       "^%-%-%-"},
-  {[0]=",",         "^,"},
-  {[0]="string",    "^%b{} *[^,%c]+", noinline = true},
-  {[0]="{",         "^{"},
-  {[0]="}",         "^}"},
-  {[0]="string",    "^%b[] *[^,%c]+", noinline = true},
-  {[0]="[",         "^%["},
-  {[0]="]",         "^%]"},
-  {[0]="-",         "^%-"},
-  {[0]=":",         "^:"},
-  {[0]="id",        "^([%w][%w %-_]*)(:[%s%c])"},
-  {[0]="string",    "^[^%c]+", noinline = true},
-  {[0]="string",    "^[^,%c ]+"}
+local tokens = {
+  {"comment",   "^#[^\n]*"},
+  {"indent",    "^\n( *)"},
+  {"space",     "^ +"},
+  {"true",      word("enabled"),  const = true, value = true},
+  {"true",      word("true"),     const = true, value = true},
+  {"true",      word("yes"),      const = true, value = true},
+  {"true",      word("on")},      const = true, value = true,
+  {"false",     word("disabled"), const = true, value = false},
+  {"false",     word("false"),    const = true, value = false},
+  {"false",     word("no"),       const = true, value = false},
+  {"false",     word("off"),      const = true, value = false},
+  {"null",      word("null"),     const = true, value = nil},
+  {"null",      word("Null"),     const = true, value = nil},
+  {"null",      word("NULL"),     const = true, value = nil},
+  {"null",      word("~"),        const = true, value = nil},
+  {"string",    "^\"(.-)\"",  force_text = true},
+  {"string",    "^'(.-)'",    force_text = true},
+  {"timestamp", "^(%d%d%d%d)-(%d%d?)-(%d%d?)%s+(%d%d?):(%d%d):(%d%d)%s+(%-?%d%d?):(%d%d)"},
+  {"timestamp", "^(%d%d%d%d)-(%d%d?)-(%d%d?)%s+(%d%d?):(%d%d):(%d%d)%s+(%-?%d%d?)"},
+  {"timestamp", "^(%d%d%d%d)-(%d%d?)-(%d%d?)%s+(%d%d?):(%d%d):(%d%d)"},
+  {"timestamp", "^(%d%d%d%d)-(%d%d?)-(%d%d?)%s+(%d%d?):(%d%d)"},
+  {"timestamp", "^(%d%d%d%d)-(%d%d?)-(%d%d?)%s+(%d%d?)"},
+  {"timestamp", "^(%d%d%d%d)-(%d%d?)-(%d%d?)"},
+  {"doc",       "^%-%-%-[^%c]*"},
+  {",",         "^,"},
+  {"string",    "^%b{} *[^,%c]+", noinline = true},
+  {"{",         "^{"},
+  {"}",         "^}"},
+  {"string",    "^%b[] *[^,%c]+", noinline = true},
+  {"[",         "^%["},
+  {"]",         "^%]"},
+  {"-",         "^%-"},
+  {":",         "^:"},
+  {"pipe",      "^(|)(%d*[+%-]?)", sep = "\n"},
+  {"pipe",      "^(>)(%d*[+%-]?)", sep = " "},
+  {"id",        "^([%w][%w %-_]*)(:[%s%c])"},
+  {"string",    "^[^%c]+", noinline = true},
+  {"string",    "^[^,%c ]+"}
 };
 exports.tokenize = function (str)
-  local token;
+  local token
+  local row = 0
   local ignore
   local indents = 0
-  local lastIndents = 0
+  local lastIndents
   local stack = {}
   local indentAmount = 0
   local inline = false
   str = str:gsub("\r\n","\010")
 
   while #str > 0 do
-    local i = 0
-    local len = size(tokens)
-    while i < len do
-      --print(i, tokens[i][0], inline)
-      local captures
+    for i in ipairs(tokens) do
+      local captures = {}
       if not inline or tokens[i].noinline == nil then
-        captures = {str:match(tokens[i][1])}
-      else
-        captures = {}
+        captures = {str:match(tokens[i][2])}
       end
 
       if #captures > 0 then
         captures.input = str:sub(0, 25)
-        token = {[0] = tokens[i][0], captures, force_text = tokens[i].force_text}
-        str = str:gsub(tokens[i][1], "", 1)
+        token = table_clone(tokens[i])
+        token[2] = captures
+        local str2 = str:gsub(tokens[i][2], "", 1)
+        token.raw = str:sub(1, #str - #str2)
+        str = str2
 
-        if token[0] == "{" or token[0] == "[" then
+        if token[1] == "{" or token[1] == "[" then
           inline = true
-        elseif token[0] == "id" then
+        elseif token[1] == "id" then
           -- Since id pattern contains last semi-colon we're re-adding it
-          str = token[1][2] .. str
-        elseif token[0] == "string" then
+          str = token[2][2] .. str
+          token.raw = token.raw:sub(1, #token.raw - #token[2][2])
+          -- Trim
+          token[2][1] = string_trim(token[2][1])
+        elseif token[1] == "string" then
           -- Finding numbers
-          local snip = token[1][1]
+          local snip = token[2][1]
           if not token.force_text then
-            if snip:match("^(%d+%.%d+)$") then
-              token[0] = "float"
-            elseif snip:match("^(%d+)$") then
-              token[0] = "int"
+            if snip:match("^(%d+%.%d+)$") or snip:match("^(%d+)$") then
+              token[1] = "number"
             end
           end
 
-        elseif token[0] == "comment" then
+        elseif token[1] == "comment" then
           ignore = true;
-        elseif token[0] == "indent" then
+        elseif token[1] == "indent" then
+          row = row + 1
           inline = false
           lastIndents = indents
           if indentAmount == 0 then
-            indentAmount = #token[1][1]
+            indentAmount = #token[2][1]
           end
 
           if indentAmount ~= 0 then
-            indents = (#token[1][1] / indentAmount);
+            indents = (#token[2][1] / indentAmount);
           else
             indents = 0
           end
 
           if indents == lastIndents then
             ignore = true;
+          elseif indents > lastIndents + 2 then
+            error("SyntaxError: invalid indentation, got " .. tostring(indents)
+              .. " instead of " .. tostring(lastIndents))
           elseif indents > lastIndents + 1 then
-            error("SyntaxError: invalid indentation, got " .. tostring(indents) .. " instead of " .. tostring(lastIndents))
+            push(stack, token)
           elseif indents < lastIndents then
-            local input = token[1].input
-            token = {[0]="dedent", {"", input = ""}}
+            local input = token[2].input
+            token = {"dedent", {"", input = ""}}
             token.input = input
             while lastIndents > indents + 1 do
               lastIndents = lastIndents - 1
               push(stack, token)
             end
           end
-        end -- if token[0] == XXX
+        end -- if token[1] == XXX
+        token.row = row
         break
       end -- if #captures > 0
-
-      i = i + 1
     end
 
     if not ignore then
@@ -225,9 +222,8 @@ exports.tokenize = function (str)
         push(stack, token)
         token = nil
       else
-        error("SyntaxError " .. context(_ENV,str))
+        error("SyntaxError " .. context(str))
       end
-
     end
 
     ignore = false;
@@ -236,16 +232,18 @@ exports.tokenize = function (str)
   return stack
 end
 
-Parser.peek = function (self)
-  return self.tokens[0]
+Parser.peek = function (self, offset)
+  offset = offset or 1
+  return self.tokens[offset + self.current]
 end
 
 Parser.advance = function (self)
-  return shift(self.tokens)
+  self.current = self.current + 1
+  return self.tokens[self.current]
 end
 
 Parser.advanceValue = function (self)
-  return self:advance()[1][1]
+  return self:advance()[2][1]
 end
 
 Parser.accept = function (self, type)
@@ -255,27 +253,24 @@ Parser.accept = function (self, type)
 end
 
 Parser.expect = function (self, type, msg)
-  if self:accept(type) then
-    return
-  end
-
-  error(msg .. context(_ENV,self:peek()[1].input))
+  return self:accept(type) or
+    error(msg .. context(self:peek()[1].input))
 end
 
-Parser.peekType = function (self, val)
-  local _lev = self.tokens[0]
-  if _lev then
-    return self.tokens[0][0] == val
-  else
-    return _lev
-  end
+Parser.expectDedent = function (self, msg)
+  return self:accept("dedent") or (self:peek() == nil) or
+    error(msg .. context(self:peek()[2].input))
+end
+
+Parser.peekType = function (self, val, offset)
+  return self:peek(offset) and self:peek(offset)[1] == val
 end
 
 Parser.ignore = function (self, items)
   local advanced
   repeat
     advanced = false
-    for k,v in pairs(items) do
+    for _,v in pairs(items) do
       if self:peekType(v) then
         self:advance()
         advanced = true
@@ -293,6 +288,20 @@ Parser.ignoreWhitespace = function (self)
 end
 
 Parser.parse = function (self)
+
+  local ref = nil
+  if self:peekType("string") then
+    local char = self:peek()[2][1]:sub(1,1)
+    if char == "&" then
+      ref = self:peek()[2][1]:sub(2)
+      self:advanceValue()
+      self:ignoreSpace()
+    elseif char == "*" then
+      ref = self:peek()[2][1]:sub(2)
+      return self.refs[ref]
+    end
+  end
+
   local result
   local c = {
     indent = self:accept("indent") and 1 or 0,
@@ -300,44 +309,41 @@ Parser.parse = function (self)
   }
   push(self.parse_stack, c)
 
-  if c.token[0] == "doc" then
+  if c.token[1] == "doc" then
     result = self:parseDoc()
-  elseif c.token[0] == "-" then
+  elseif c.token[1] == "-" then
     result = self:parseList()
-  elseif c.token[0] == "{" then
+  elseif c.token[1] == "{" then
     result = self:parseInlineHash()
-  elseif c.token[0] == "[" then
+  elseif c.token[1] == "[" then
     result = self:parseInlineList()
-  elseif c.token[0] == "id" then
+  elseif c.token[1] == "id" then
     result = self:parseHash()
-  elseif c.token[0] == "string" then
-    result = self:advanceValue()
-  elseif c.token[0] == "timestamp" then
+  elseif c.token[1] == "string" then
+    result = self:parseString("\n")
+  elseif c.token[1] == "timestamp" then
     result = self:parseTimestamp()
-  elseif c.token[0] == "float" then
+  elseif c.token[1] == "number" then
     result = tonumber(self:advanceValue())
-  elseif c.token[0] == "int" then
-    result = tonumber(self:advanceValue())
-  elseif c.token[0] == "true" then
+  elseif c.token[1] == "pipe" then
+    result = self:parsePipe()
+  elseif c.token.const == true then
     self:advanceValue();
-    result = true
-  elseif c.token[0] == "false" then
-    self:advanceValue();
-    result = false
-  elseif c.token[0] == "null" then
-    self:advanceValue();
-    result = nil
+    result = c.token.value
+  else
+    error("ParseError: unexpected token '" .. c.token[1] .. "'")
   end
 
-  local c = pop(self.parse_stack)
+  pop(self.parse_stack)
   while c.indent > 0 do
     c.indent = c.indent - 1
-    if self:peek() ~= nil then
-      local term = "term "..c.token[0]..": '"..c.token[1][1].."'"
-      self:expect("dedent", "last ".. term .." is not properly dedented")
-    end
+    local term = "term "..c.token[1]..": '"..c.token[2][1].."'"
+    self:expectDedent("last ".. term .." is not properly dedented")
   end
 
+  if ref then
+    self.refs[ref] = result
+  end
   return result
 end
 
@@ -346,14 +352,120 @@ Parser.parseDoc = function (self)
   return self:parse()
 end
 
+Parser.inline = function (self)
+  local current = self:peek(0)
+  if not current then
+    return {}, 0
+  end
+
+  local inline = {}
+  local i = 0
+
+  while self:peek(i) and not self:peekType("indent", i) and current.row == self:peek(i).row do
+    inline[self:peek(i)[1]] = true
+    i = i - 1
+  end
+  return inline, -i
+end
+
+Parser.isInline = function (self)
+  local _, i = self:inline()
+  return i > 0
+end
+
+Parser.parent = function(self, level)
+  level = level or 1
+  return self.parse_stack[#self.parse_stack - level]
+end
+
+Parser.parentType = function(self, type, level)
+  return self:parent(level) and self:parent(level).token[1] == type
+end
+
+Parser.parseString = function (self)
+  if self:isInline() then
+    local result = self:advanceValue()
+
+    --[[
+      - a: this looks
+        flowing: but is
+        no: string
+    --]]
+    local types = self:inline()
+    if types["id"] and types["-"] then
+      if not self:peekType("indent") or not self:peekType("indent", 2) then
+        return result
+      end
+    end
+
+    --[[
+      a: 1
+      b: this is
+        a flowing string
+        example
+      c: 3
+    --]]
+    if self:peekType("indent") then
+      self:expect("indent", "text block needs to start with indent")
+      local addtl = self:accept("indent")
+
+      result = result .. "\n" .. self:parseTextBlock("\n")
+
+      self:expectDedent("text block ending dedent missing")
+      if addtl then
+        self:expectDedent("text block ending dedent missing")
+      end
+    end
+    return result
+  else
+    --[[
+      a: 1
+      b:
+        this is also
+        a flowing string
+        example
+      c: 3
+    --]]
+    return self:parseTextBlock("\n")
+  end
+end
+
+Parser.parsePipe = function (self)
+  local pipe = self:expect("pipe")
+  self:expect("indent", "text block needs to start with indent")
+  local result = self:parseTextBlock(pipe.sep)
+  self:expectDedent("text block ending dedent missing")
+  return result
+end
+
+Parser.parseTextBlock = function (self, sep)
+  local token = self:advance()
+  local result = string_trim(token.raw, "\n")
+  local indents = 0
+  while self:peek() ~= nil and ( indents > 0 or not self:peekType("dedent") ) do
+    local newtoken = self:advance()
+    while token.row < newtoken.row do
+      result = result .. sep
+      token.row = token.row + 1
+    end
+    if newtoken[1] == "indent" then
+      indents = indents + 1
+    elseif newtoken[1] == "dedent" then
+      indents = indents - 1
+    else
+      result = result .. string_trim(newtoken.raw, "\n")
+    end
+  end
+  return result
+end
+
 Parser.parseHash = function (self, hash)
   hash = hash or {}
   local indents = 0
-  local parent = self.parse_stack[size(self.parse_stack)-2]
 
-  if parent ~= nil and parent.token[0] == "-" then
+  if self:isInline() then
     local id = self:advanceValue()
-    self:expect(":","expected semi-colon after id")
+    self:expect(":", "expected semi-colon after id")
     self:ignoreSpace()
     if self:accept("indent") then
       indents = indents + 1
@@ -376,7 +488,7 @@ Parser.parseHash = function (self, hash)
   end
 
   while indents > 0 do
-    self:expect("dedent", "expected dedent")
+    self:expectDedent("expected dedent")
     indents = indents - 1
   end
 
@@ -442,15 +554,15 @@ Parser.parseInlineList = function (self)
 end
 
 Parser.parseTimestamp = function (self)
-  token = self:advance()[1]
+  local capture = self:advance()[2]
 
   return os.time{
-    year  = token[1],
-    month = token[2],
-    day   = token[3],
-    hour  = token[4] or 0,
-    min   = token[5] or 0,
-    sec   = token[6] or 0
+    year  = capture[1],
+    month = capture[2],
+    day   = capture[3],
+    hour  = capture[4] or 0,
+    min   = capture[5] or 0,
+    sec   = capture[6] or 0
   }
 end
 

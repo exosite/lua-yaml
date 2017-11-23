@@ -21,9 +21,14 @@ LUA YAML parser, based on [js-lua](https://github.com/tj/js-yaml/) , fast and ti
     $ luarocks install lua-yaml
 
 # Testing
-Install busted `luarocks install busted` and run:
+Install busted & luacheck `luarocks install busted && luarocks install luacheck` and run:
 
     $ busted
+    $ luacheck yaml.lua
+
+or just:
+
+    $ make test
 
 # License
 (The MIT License)

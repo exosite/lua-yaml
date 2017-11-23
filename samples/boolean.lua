@@ -1,8 +1,8 @@
 return {
-  ["title"] = "Some Title",
-  ["hope"] = "to see this",
   ["falseme"] = "I can see this",
+  ["hope"] = "to see this",
   ["say"] = true,
-  ["what"] = false,
-  ["trueme"] = "found"
+  ["title"] = "Some Title",
+  ["trueme"] = "found",
+  ["what"] = false
 }

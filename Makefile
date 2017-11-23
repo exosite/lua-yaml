@@ -15,4 +15,4 @@ samples: $(SAMPLES_OUT)
 
 .PHONY: test
 test:
-	busted
+	busted && luacheck yaml.lua

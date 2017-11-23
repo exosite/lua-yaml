@@ -1,5 +1,4 @@
 return {
-  ["SECOND"] = "is missing",
   ["FIRST"] = {
     [1] = {
       ["dict"] = {
@@ -17,5 +16,6 @@ return {
         }
       }
     }
-  }
+  },
+  ["SECOND"] = "is missing"
 }

@@ -1,14 +1,18 @@
 return {
-  text = 'Text',
-  text_with_space = 'Text text',
-  text_with_single_quote = 'Text',
-  text_with_double_quote = 'Text',
-  text_number = '1',
-  number = 1,
-  ['true'] = true,
-  ['false'] = false,
-  object = {
-    key = 'value',
+  ["array"] = {
+    [1] = "a",
+    [2] = "b",
+    [3] = "c"
   },
-  array = { 'a', 'b', 'c' },
+  ["false"] = false,
+  ["number"] = 1,
+  ["object"] = {
+    ["key"] = "value"
+  },
+  ["text"] = "Text",
+  ["text_number"] = "1",
+  ["text_with_double_quote"] = "Text",
+  ["text_with_single_quote"] = "Text",
+  ["text_with_space"] = "Text text",
+  ["true"] = true
 }

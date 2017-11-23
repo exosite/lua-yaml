@@ -1,10 +1,10 @@
 return {
-  ["pid"] = "/home/www/pids/thin.pid",
   ["dbg-mode"] = false,
-  ["servers"] = 2,
+  ["pid"] = "/home/www/pids/thin.pid",
+  ["port"] = 3000,
   ["require"] = {
   },
-  ["wait"] = 30,
+  ["servers"] = 2,
   ["timeout"] = 15,
-  ["port"] = 3000
+  ["wait"] = 30
 }
