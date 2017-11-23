@@ -9,13 +9,13 @@ function table_print_value(value, indent, done)
   done = done or {}
   if type(value) == "table" and not done [value] then
     done [value] = true
-    
+
     local rep = "{\n"
     local last
     for key in pairs (value) do
       last = key
     end
-    
+
     local comma
     for key, value2 in pairs (value) do
       if key == last then
@@ -24,26 +24,26 @@ function table_print_value(value, indent, done)
         comma = ','
       end
       local keyRep
-      if type(key) == "number" then 
-        keyRep = key 
-      else 
-        keyRep = string.format("%q", tostring(key)) 
+      if type(key) == "number" then
+        keyRep = key
+      else
+        keyRep = string.format("%q", tostring(key))
       end
       rep = rep .. string.format(
-        "%s[%s] = %s%s\n", 
+        "%s[%s] = %s%s\n",
         string.rep(" ", indent + 7),
         keyRep,
         table_print_value(value2, indent + 7, done),
         comma
       )
     end
-    
+
     rep = rep .. string.rep (" ", indent+4) -- indent it
     rep = rep .. "}"
     return rep
   elseif type(value) == "string" then
     return string.format("%q", value)
-  else 
+  else
     return tostring(value)
   end
 end
@@ -103,10 +103,10 @@ end
 exports = {}
 exports.version = "0.2.3";
 
-word = function(w) return "^"..w.."[%s$%c]" end 
+word = function(w) return "^"..w.."[%s$%c]" end
 
 tokens = {
-  [0] = 
+  [0] =
   {[0]="comment",   "^#[^\n]*"},
   {[0]="indent",    "^\n( *)"},
   {[0]="space",     "^ +",""},
@@ -151,7 +151,7 @@ exports.tokenize = function (str)
   local indentAmount = 0
   local inline = false
   str = str:gsub("\r\n","\010")
-  
+
   while #str > 0 do
     local i = 0
     local len = size(tokens)
@@ -163,12 +163,12 @@ exports.tokenize = function (str)
       else
         captures = {}
       end
-      
+
       if #captures > 0 then
         captures.input = str:sub(0, 25)
         token = {[0] = tokens[i][0], captures, force_text = tokens[i].force_text}
         str = str:gsub(tokens[i][1], "", 1)
-        
+
         if token[0] == "{" or token[0] == "[" then
           inline = true
         elseif token[0] == "id" then
@@ -184,7 +184,7 @@ exports.tokenize = function (str)
               token[0] = "int"
             end
           end
-          
+
         elseif token[0] == "comment" then
           ignore = true;
         elseif token[0] == "indent" then
@@ -199,7 +199,7 @@ exports.tokenize = function (str)
           else
             indents = 0
           end
-          
+
           if indents == lastIndents then
             ignore = true;
           elseif indents > lastIndents + 1 then
@@ -264,11 +264,11 @@ end
 
 Parser.peekType = function (self, val)
   local _lev = self.tokens[0]
-  if _lev then 
+  if _lev then
     return self.tokens[0][0] == val
-  else 
+  else
     return _lev
-  end 
+  end
 end
 
 Parser.ignore = function (self, items)
@@ -282,7 +282,7 @@ Parser.ignore = function (self, items)
       end
     end
   until advanced == false
-end 
+end
 
 Parser.ignoreSpace = function (self)
   self:ignore{"space"}
@@ -293,7 +293,7 @@ Parser.ignoreWhitespace = function (self)
 end
 
 Parser.parse = function (self)
-  local result 
+  local result
   local c = {
     indent = self:accept("indent") and 1 or 0,
     token = self:peek()
@@ -328,7 +328,7 @@ Parser.parse = function (self)
     self:advanceValue();
     result = nil
   end
-  
+
   local c = pop(self.parse_stack)
   while c.indent > 0 do
     c.indent = c.indent - 1
@@ -337,7 +337,7 @@ Parser.parse = function (self)
       self:expect("dedent", "last ".. term .." is not properly dedented")
     end
   end
-  
+
   return result
 end
 
@@ -350,7 +350,7 @@ Parser.parseHash = function (self, hash)
   hash = hash or {}
   local indents = 0
   local parent = self.parse_stack[size(self.parse_stack)-2]
-  
+
   if parent ~= nil and parent.token[0] == "-" then
     local id = self:advanceValue()
     self:expect(":","expected semi-colon after id")
@@ -366,7 +366,7 @@ Parser.parseHash = function (self, hash)
     end
     self:ignoreSpace();
   end
-    
+
   while self:peekType("id") do
     local id = self:advanceValue()
     self:expect(":","expected semi-colon after id")
@@ -374,12 +374,12 @@ Parser.parseHash = function (self, hash)
     hash[id] = self:parse()
     self:ignoreSpace();
   end
-  
+
   while indents > 0 do
     self:expect("dedent", "expected dedent")
     indents = indents - 1
   end
-  
+
   return hash
 end
 
@@ -387,7 +387,7 @@ Parser.parseInlineHash = function (self)
   local id
   local hash = {}
   local i = 0
-  
+
   self:accept("{")
   while not self:accept("}") do
     self:ignoreSpace()
@@ -397,7 +397,7 @@ Parser.parseInlineHash = function (self)
 
     self:ignoreWhitespace()
     if self:peekType("id") then
-      id = self:advanceValue() 
+      id = self:advanceValue()
       if id then
         self:expect(":","expected semi-colon after id")
         self:ignoreSpace()
@@ -440,13 +440,13 @@ Parser.parseInlineList = function (self)
 
   return list
 end
-  
+
 Parser.parseTimestamp = function (self)
   token = self:advance()[1]
-  
+
   return os.time{
-    year  = token[1], 
-    month = token[2], 
+    year  = token[1],
+    month = token[2],
     day   = token[3],
     hour  = token[4] or 0,
     min   = token[5] or 0,
