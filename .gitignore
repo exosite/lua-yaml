@@ -1,2 +1,3 @@
 samples/*.json
 priv/
+*.rock
