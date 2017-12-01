@@ -92,9 +92,9 @@ function Parser.new (self, tokens)
   return self
 end
 
-local exports = {version = "1.1"}
+local exports = {version = "1.2"}
 
-local word = function(w) return "^"..w.."[%s$%c]" end
+local word = function(w) return "^("..w..")([%s$%c])" end
 
 local tokens = {
   {"comment",   "^#[^\n]*"},
@@ -164,6 +164,10 @@ exports.tokenize = function (str)
 
         if token[1] == "{" or token[1] == "[" then
           inline = true
+        elseif token.const then
+          -- Since word pattern contains last char we're re-adding it
+          str = token[2][2] .. str
+          token.raw = token.raw:sub(1, #token.raw - #token[2][2])
         elseif token[1] == "id" then
           -- Since id pattern contains last semi-colon we're re-adding it
           str = token[2][2] .. str
@@ -331,7 +335,7 @@ Parser.parse = function (self)
     self:advanceValue();
     result = c.token.value
   else
-    error("ParseError: unexpected token '" .. c.token[1] .. "'")
+    error("ParseError: unexpected token '" .. c.token[1] .. "'" .. context(c.token.input))
   end
 
   pop(self.parse_stack)

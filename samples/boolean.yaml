@@ -5,3 +5,11 @@
   say: yes
   trueme: found
   hope: to see this
+  also:
+    - lists
+    - can
+    - say
+    - true
+  to:
+    - false
+    - and so on
