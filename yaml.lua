@@ -112,8 +112,10 @@ local tokens = {
   {"null",      word("Null"),     const = true, value = nil},
   {"null",      word("NULL"),     const = true, value = nil},
   {"null",      word("~"),        const = true, value = nil},
-  {"string",    "^\"(.-)\"",  force_text = true},
-  {"string",    "^'(.-)'",    force_text = true},
+  {"id",    "^\"([^\"]-)\" *(:[%s%c])"},
+  {"id",    "^'([^']-)' *(:[%s%c])"},
+  {"string",    "^\"([^\"]-)\"",  force_text = true},
+  {"string",    "^'([^']-)'",    force_text = true},
   {"timestamp", "^(%d%d%d%d)-(%d%d?)-(%d%d?)%s+(%d%d?):(%d%d):(%d%d)%s+(%-?%d%d?):(%d%d)"},
   {"timestamp", "^(%d%d%d%d)-(%d%d?)-(%d%d?)%s+(%d%d?):(%d%d):(%d%d)%s+(%-?%d%d?)"},
   {"timestamp", "^(%d%d%d%d)-(%d%d?)-(%d%d?)%s+(%d%d?):(%d%d):(%d%d)"},
@@ -203,7 +205,7 @@ exports.tokenize = function (str)
             ignore = true;
           elseif indents > lastIndents + 2 then
             error("SyntaxError: invalid indentation, got " .. tostring(indents)
-              .. " instead of " .. tostring(lastIndents))
+              .. " instead of " .. tostring(lastIndents) .. context(token[2].input))
           elseif indents > lastIndents + 1 then
             push(stack, token)
           elseif indents < lastIndents then

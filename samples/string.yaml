@@ -1,0 +1,13 @@
+---
+ a: 1
+ b: 2
+ 'c': 3
+ d: ''
+ e:
+  something else
+ f:
+  g:
+   'on': 1
+   'off': 0
+ h:
+  i: dd
