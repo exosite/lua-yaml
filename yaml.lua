@@ -9,7 +9,7 @@ table_print_value = function(value, indent, done)
     for key in pairs (value) do
       list[#list + 1] = key
     end
-    table.sort(list)
+    table.sort(list, function(a, b) return tostring(a) < tostring(b) end)
     local last = list[#list]
 
     local rep = "{\n"
@@ -103,7 +103,7 @@ local tokens = {
   {"true",      word("enabled"),  const = true, value = true},
   {"true",      word("true"),     const = true, value = true},
   {"true",      word("yes"),      const = true, value = true},
-  {"true",      word("on")},      const = true, value = true,
+  {"true",      word("on"),      const = true, value = true},
   {"false",     word("disabled"), const = true, value = false},
   {"false",     word("false"),    const = true, value = false},
   {"false",     word("no"),       const = true, value = false},
@@ -296,7 +296,7 @@ end
 Parser.parse = function (self)
 
   local ref = nil
-  if self:peekType("string") then
+  if self:peekType("string") and not self:peek().force_text then
     local char = self:peek()[2][1]:sub(1,1)
     if char == "&" then
       ref = self:peek()[2][1]:sub(2)

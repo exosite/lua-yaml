@@ -1,0 +1,9 @@
+---
+- a: Hello
+  b:
+  - b1a: 0
+    b1b: "off"
+    b1c: on
+  - b2a: "*"
+    b2b: ''
+  c: 0
