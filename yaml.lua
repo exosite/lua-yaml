@@ -136,7 +136,7 @@ local tokens = {
   {"pipe",      "^(>)(%d*[+%-]?)", sep = " "},
   {"id",        "^([%w][%w %-_]*)(:[%s%c])"},
   {"string",    "^[^%c]+", noinline = true},
-  {"string",    "^[^,%c ]+"}
+  {"string",    "^[^,%]}%c ]+"}
 };
 exports.tokenize = function (str)
   local token
