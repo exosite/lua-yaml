@@ -130,13 +130,13 @@ local tokens = {
   {"string",    "^%b[] *[^,%c]+", noinline = true},
   {"[",         "^%["},
   {"]",         "^%]"},
-  {"-",         "^%-"},
+  {"-",         "^%-", noinline = true},
   {":",         "^:"},
   {"pipe",      "^(|)(%d*[+%-]?)", sep = "\n"},
   {"pipe",      "^(>)(%d*[+%-]?)", sep = " "},
   {"id",        "^([%w][%w %-_]*)(:[%s%c])"},
   {"string",    "^[^%c]+", noinline = true},
-  {"string",    "^[^,%c ]+"}
+  {"string",    "^[^,%]}%c ]+"}
 };
 exports.tokenize = function (str)
   local token
@@ -180,7 +180,7 @@ exports.tokenize = function (str)
           -- Finding numbers
           local snip = token[2][1]
           if not token.force_text then
-            if snip:match("^(%d+%.%d+)$") or snip:match("^(%d+)$") then
+            if snip:match("^(-?%d+%.%d+)$") or snip:match("^(-?%d+)$") then
               token[1] = "number"
             end
           end
