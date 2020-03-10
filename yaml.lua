@@ -180,7 +180,7 @@ exports.tokenize = function (str)
           -- Finding numbers
           local snip = token[2][1]
           if not token.force_text then
-            if snip:match("^(%d+%.%d+)$") or snip:match("^(%d+)$") then
+            if snip:match("^(-?%d+%.%d+)$") or snip:match("^(-?%d+)$") then
               token[1] = "number"
             end
           end
