@@ -568,8 +568,9 @@ Parser.parseTimestamp = function (self)
     day   = capture[3],
     hour  = capture[4] or 0,
     min   = capture[5] or 0,
-    sec   = capture[6] or 0
-  }
+    sec   = capture[6] or 0,
+    isdst = false,
+  } - os.time{year=1970, month=1, day=1, hour=8}
 end
 
 exports.eval = function (str)
