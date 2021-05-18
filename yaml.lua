@@ -130,6 +130,7 @@ local tokens = {
   {"string",    "^%b[] *[^,%c]+", noinline = true},
   {"[",         "^%["},
   {"]",         "^%]"},
+  {"string",    "^-[^%s]+", noinline = true},
   {"-",         "^%-", noinline = true},
   {":",         "^:"},
   {"pipe",      "^(|)(%d*[+%-]?)", sep = "\n"},
