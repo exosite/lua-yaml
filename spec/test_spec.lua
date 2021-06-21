@@ -33,3 +33,25 @@ describe('Parsing in', function()
     end)
   end
 end)
+
+describe('dump', function()
+  local expected = {
+    total = 3,
+    title = "very good!",
+    list = {
+      {item = "good", id = 3},
+      {item = "item2", id = 4, sub = {
+        no = 34,
+        te = "haha",
+        it = {
+          "this is false",
+          "aother",
+          {some=1, at=4}
+        }
+      }}
+    }
+  }
+  local str = yaml.dump(expected)
+  local data = yaml.eval(str)
+  assert.are.same(expected, data)
+end)
