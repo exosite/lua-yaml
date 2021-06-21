@@ -10,33 +10,32 @@ table_print_value = function(value, indent, done)
       list[#list + 1] = key
     end
     table.sort(list, function(a, b) return tostring(a) < tostring(b) end)
-    local last = list[#list]
+    -- local last = list[#list]
 
-    local rep = "{\n"
-    local comma
+    local rep = "\n"
+    -- local comma
     for _, key in ipairs (list) do
-      if key == last then
-        comma = ''
-      else
-        comma = ','
-      end
+      -- if key == last then
+      --   comma = ''
+      -- else
+      --   comma = ','
+      -- end
       local keyRep
       if type(key) == "number" then
-        keyRep = key
+        keyRep = "- "
       else
-        keyRep = string.format("%q", tostring(key))
+        keyRep = tostring(key)..": " -- string.format("%q", tostring(key))
       end
       rep = rep .. string.format(
-        "%s[%s] = %s%s\n",
-        string.rep(" ", indent + 2),
+        "%s%s%s\n",
+        string.rep(" ", indent),
         keyRep,
-        table_print_value(value[key], indent + 2, done),
-        comma
+        table_print_value(value[key], indent + 2, done)
       )
     end
 
     rep = rep .. string.rep(" ", indent) -- indent it
-    rep = rep .. "}"
+    -- rep = rep .. "}"
 
     done[value] = false
     return rep
@@ -47,8 +46,23 @@ table_print_value = function(value, indent, done)
   end
 end
 
+-- local dump = require("pl.pretty").dump
+local function trimBlankLine(str)
+  local lines = {}
+  for s in str:gmatch("[^\r\n]+") do
+    s = string.gsub(s, "%s+$", "")
+    print(#s.."|"..s)
+    if #s > 0 then
+      table.insert(lines, s)
+    end
+  end
+  return table.concat(lines, "\n")
+end
+
 local table_print = function(tt)
-  print('return '..table_print_value(tt))
+  local result = table_print_value(tt)
+  result = trimBlankLine(result)
+  return result
 end
 
 local table_clone = function(t)
