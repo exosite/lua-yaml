@@ -51,7 +51,7 @@ local function trimBlankLine(str)
   local lines = {}
   for s in str:gmatch("[^\r\n]+") do
     s = string.gsub(s, "%s+$", "")
-    print(#s.."|"..s)
+    -- print(#s.."|"..s)
     if #s > 0 then
       table.insert(lines, s)
     end
