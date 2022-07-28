@@ -29,7 +29,6 @@ describe('Parsing in', function()
     it(file, function()
       local data = yaml.eval(readAll("samples/"..file..".yaml"))
       local answer = require("samples."..file)
-      print(file, answer)
       if answer == 0 then
         assert.is.Nil(data)
       else
