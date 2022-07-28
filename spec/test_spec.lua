@@ -29,7 +29,12 @@ describe('Parsing in', function()
     it(file, function()
       local data = yaml.eval(readAll("samples/"..file..".yaml"))
       local answer = require("samples."..file)
-      assert.are.same(answer, data)
+      print(file, answer)
+      if answer == 0 then
+        assert.is.Nil(data)
+      else
+        assert.are.same(answer, data)
+      end
     end)
   end
 end)

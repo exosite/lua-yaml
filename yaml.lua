@@ -329,29 +329,31 @@ Parser.parse = function (self)
   }
   push(self.parse_stack, c)
 
-  if c.token[1] == "doc" then
-    result = self:parseDoc()
-  elseif c.token[1] == "-" then
-    result = self:parseList()
-  elseif c.token[1] == "{" then
-    result = self:parseInlineHash()
-  elseif c.token[1] == "[" then
-    result = self:parseInlineList()
-  elseif c.token[1] == "id" then
-    result = self:parseHash()
-  elseif c.token[1] == "string" then
-    result = self:parseString("\n")
-  elseif c.token[1] == "timestamp" then
-    result = self:parseTimestamp()
-  elseif c.token[1] == "number" then
-    result = tonumber(self:advanceValue())
-  elseif c.token[1] == "pipe" then
-    result = self:parsePipe()
-  elseif c.token.const == true then
-    self:advanceValue();
-    result = c.token.value
-  else
-    error("ParseError: unexpected token '" .. c.token[1] .. "'" .. context(c.token.input))
+  if c.token then
+    if c.token[1] == "doc" then
+      result = self:parseDoc()
+    elseif c.token[1] == "-" then
+      result = self:parseList()
+    elseif c.token[1] == "{" then
+      result = self:parseInlineHash()
+    elseif c.token[1] == "[" then
+      result = self:parseInlineList()
+    elseif c.token[1] == "id" then
+      result = self:parseHash()
+    elseif c.token[1] == "string" then
+      result = self:parseString("\n")
+    elseif c.token[1] == "timestamp" then
+      result = self:parseTimestamp()
+    elseif c.token[1] == "number" then
+      result = tonumber(self:advanceValue())
+    elseif c.token[1] == "pipe" then
+      result = self:parsePipe()
+    elseif c.token.const == true then
+      self:advanceValue();
+      result = c.token.value
+    else
+      error("ParseError: unexpected token '" .. c.token[1] .. "'" .. context(c.token.input))
+    end
   end
 
   pop(self.parse_stack)
