@@ -1,0 +1,17 @@
+---
+key: #comment after id
+   - value line 1
+   #comment before list item
+   - value line 2
+#comment
+ #multi
+        #line
+   - value line 3 #Comment after list item
+key2: 30 # comment 5
+key3: "String value" # comment after string with quotes
+key4: "#not a comment"
+key5: false # Comment boolean
+key6: 123 # Comment number
+key7:
+  key8: value # Comment simple string
+  key9: not#comments #Comment simple string with # inside and multiple # 

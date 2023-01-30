@@ -1,5 +1,5 @@
 return {
-  ["Date"] = 1006498997,
+  ["Date"] = os.time{year=2001, month=11, day=23, hour=10, min=3, sec=17, isdst=false},
   ["Fatal"] = "Unknown variable \"bar\"",
   ["Stack"] = {
     [1] = {

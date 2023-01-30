@@ -1,44 +1,45 @@
-local table_print_value
-table_print_value = function(value, indent, done)
-  indent = indent or 0
-  done = done or {}
-  if type(value) == "table" and not done [value] then
-    done [value] = true
+---yaml.lua
+--LUA YAML parser, based on js-lua, fast and tiny.
+--Although this implementation does not currently support the entire YAML specification,
+--feel free to fork the project and submit a patch :)
+-- https://github.com/exosite/lua-yaml
 
-    local list = {}
+local Generator = {}
+function Generator.new (self)
+  return self
+end
+
+Generator.tablePrintValue =function (self, value, indent, done)
+  indent =indent or 0
+  done =done or {}
+  if type(value)=="table" and not done [value] then
+    done [value] =true
+
+    local list ={}
     for key in pairs (value) do
-      list[#list + 1] = key
+      list[#list+1] =key
     end
     table.sort(list, function(a, b) return tostring(a) < tostring(b) end)
-    local last = list[#list]
 
-    local rep = "{\n"
-    local comma
+    local rep ="\n"
     for _, key in ipairs (list) do
-      if key == last then
-        comma = ''
-      else
-        comma = ','
-      end
       local keyRep
-      if type(key) == "number" then
-        keyRep = key
+      if type(key)=="number" then
+        keyRep ="- "
       else
-        keyRep = string.format("%q", tostring(key))
+        keyRep =tostring(key)..": "
       end
-      rep = rep .. string.format(
-        "%s[%s] = %s%s\n",
-        string.rep(" ", indent + 2),
+      rep = rep..string.format(
+        "%s%s%s\n",
+        string.rep(" ", indent),
         keyRep,
-        table_print_value(value[key], indent + 2, done),
-        comma
+        self:tablePrintValue(value[key], indent+2, done)
       )
     end
 
-    rep = rep .. string.rep(" ", indent) -- indent it
-    rep = rep .. "}"
+    rep = rep..string.rep(" ", indent)
 
-    done[value] = false
+    done[value] =false
     return rep
   elseif type(value) == "string" then
     return string.format("%q", value)
@@ -47,9 +48,17 @@ table_print_value = function(value, indent, done)
   end
 end
 
-local table_print = function(tt)
-  print('return '..table_print_value(tt))
+local function trimBlankLine(str)
+  local lines = {}
+  for s in str:gmatch("[^\r\n]+") do
+    s = string.gsub(s, "%s+$", "")
+    if #s > 0 then
+      table.insert(lines, s)
+    end
+  end
+  return table.concat(lines, "\n")
 end
+
 
 local table_clone = function(t)
   local clone = {}
@@ -92,13 +101,14 @@ function Parser.new (self, tokens)
   return self
 end
 
-local exports = {version = "1.2"}
+local exports = {version = "1.3"}
 
 local word = function(w) return "^("..w..")([%s$%c])" end
 
 local tokens = {
-  {"comment",   "^#[^\n]*"},
-  {"indent",    "^\n( *)"},
+  {"yaml-version", "^%%YAML ([0-9%.]*)"},
+  {"comment",   "^[\n ]+#[^\n]*"},
+  {"indent",    "^[\n]+( *)"},
   {"space",     "^ +"},
   {"true",      word("enabled"),  const = true, value = true},
   {"true",      word("true"),     const = true, value = true},
@@ -130,14 +140,17 @@ local tokens = {
   {"string",    "^%b[] *[^,%c]+", noinline = true},
   {"[",         "^%["},
   {"]",         "^%]"},
+  {"string",    "^-[^%s]+", noinline = true},
   {"-",         "^%-", noinline = true},
   {":",         "^:"},
   {"pipe",      "^(|)(%d*[+%-]?)", sep = "\n"},
   {"pipe",      "^(>)(%d*[+%-]?)", sep = " "},
   {"id",        "^([%w][%w %-_]*)(:[%s%c])"},
-  {"string",    "^[^%c]+", noinline = true},
+  {"string",    "^([^%c]-)( #)[^\n]+", noinline = true}, --String with " #comment"
+  {"string",    "^([^%c]+)", noinline = true},
   {"string",    "^[^,%]}%c ]+"}
 };
+
 exports.tokenize = function (str)
   local token
   local row = 0
@@ -157,13 +170,12 @@ exports.tokenize = function (str)
       end
 
       if #captures > 0 then
-        captures.input = str:sub(0, 25)
+        captures.input = str:sub(0, 50)
         token = table_clone(tokens[i])
         token[2] = captures
         local str2 = str:gsub(tokens[i][2], "", 1)
         token.raw = str:sub(1, #str - #str2)
         str = str2
-
         if token[1] == "{" or token[1] == "[" then
           inline = true
         elseif token.const then
@@ -180,13 +192,12 @@ exports.tokenize = function (str)
           -- Finding numbers
           local snip = token[2][1]
           if not token.force_text then
-            if snip:match("^(-?%d+%.%d+)$") or snip:match("^(-?%d+)$") then
+            if snip:match("^(-?%d+%.%d+)[^\n]*") or snip:match("^(-?%d+)[^\n]*") then
               token[1] = "number"
             end
           end
-
         elseif token[1] == "comment" then
-          ignore = true;
+          ignore = true
         elseif token[1] == "indent" then
           row = row + 1
           inline = false
@@ -194,7 +205,6 @@ exports.tokenize = function (str)
           if indentAmount == 0 then
             indentAmount = #token[2][1]
           end
-
           if indentAmount ~= 0 then
             indents = (#token[2][1] / indentAmount);
           else
@@ -315,29 +325,33 @@ Parser.parse = function (self)
   }
   push(self.parse_stack, c)
 
-  if c.token[1] == "doc" then
-    result = self:parseDoc()
-  elseif c.token[1] == "-" then
-    result = self:parseList()
-  elseif c.token[1] == "{" then
-    result = self:parseInlineHash()
-  elseif c.token[1] == "[" then
-    result = self:parseInlineList()
-  elseif c.token[1] == "id" then
-    result = self:parseHash()
-  elseif c.token[1] == "string" then
-    result = self:parseString("\n")
-  elseif c.token[1] == "timestamp" then
-    result = self:parseTimestamp()
-  elseif c.token[1] == "number" then
-    result = tonumber(self:advanceValue())
-  elseif c.token[1] == "pipe" then
-    result = self:parsePipe()
-  elseif c.token.const == true then
-    self:advanceValue();
-    result = c.token.value
-  else
-    error("ParseError: unexpected token '" .. c.token[1] .. "'" .. context(c.token.input))
+  if c.token then
+    if c.token[1] == "yaml-version" then
+      result = self:parseYamlVersion()
+    elseif c.token[1] == "doc" then
+      result = self:parseDoc()
+    elseif c.token[1] == "-" then
+      result = self:parseList()
+    elseif c.token[1] == "{" then
+      result = self:parseInlineHash()
+    elseif c.token[1] == "[" then
+      result = self:parseInlineList()
+    elseif c.token[1] == "id" then
+      result = self:parseHash()
+    elseif c.token[1] == "string" then
+      result = self:parseString("\n")
+    elseif c.token[1] == "timestamp" then
+      result = self:parseTimestamp()
+    elseif c.token[1] == "number" then
+      result = tonumber(self:advanceValue())
+    elseif c.token[1] == "pipe" then
+      result = self:parsePipe()
+    elseif c.token.const == true then
+      self:advanceValue();
+      result = c.token.value
+    else
+      error("ParseError: unexpected token '" .. c.token[1] .. "'" .. context(c.token.input))
+    end
   end
 
   pop(self.parse_stack)
@@ -350,7 +364,17 @@ Parser.parse = function (self)
   if ref then
     self.refs[ref] = result
   end
+
   return result
+end
+
+Parser.parseYamlVersion = function (self)
+  local version = tonumber(self:advanceValue())
+  if version~=1.1 then
+    error("Unsupported YAML protocol version, has: "..version..", need: 1.1")
+  end
+  self:accept("yaml-version")
+  return self:parse()
 end
 
 Parser.parseDoc = function (self)
@@ -367,10 +391,14 @@ Parser.inline = function (self)
   local inline = {}
   local i = 0
 
-  while self:peek(i) and not self:peekType("indent", i) and current.row == self:peek(i).row do
+  while
+    self:peek(i) and not self:peekType("indent", i) and not self:peekType("doc", i)
+    and current.row == self:peek(i).row
+  do
     inline[self:peek(i)[1]] = true
     i = i - 1
   end
+
   return inline, -i
 end
 
@@ -468,7 +496,6 @@ end
 Parser.parseHash = function (self, hash)
   hash = hash or {}
   local indents = 0
-
   if self:isInline() then
     local id = self:advanceValue()
     self:expect(":", "expected semi-colon after id")
@@ -487,7 +514,7 @@ Parser.parseHash = function (self, hash)
 
   while self:peekType("id") do
     local id = self:advanceValue()
-    self:expect(":","expected semi-colon after id")
+    self:expect(":", "expected semi-colon after id")
     self:ignoreSpace()
     hash[id] = self:parse()
     self:ignoreSpace();
@@ -560,23 +587,28 @@ Parser.parseInlineList = function (self)
 end
 
 Parser.parseTimestamp = function (self)
-  local capture = self:advance()[2]
-
+  local capture =self:advance()[2]
   return os.time{
-    year  = capture[1],
-    month = capture[2],
-    day   = capture[3],
-    hour  = capture[4] or 0,
-    min   = capture[5] or 0,
-    sec   = capture[6] or 0,
-    isdst = false,
-  } - os.time{year=1970, month=1, day=1, hour=8}
+    year =capture[1],
+    month =capture[2],
+    day =capture[3],
+    hour =(capture[4] or 0) + (capture[7] or 0),
+    min =(capture[5] or 0) + (capture[8] or 0),
+    sec =capture[6] or 0,
+    isdst =false,
+  }
 end
 
-exports.eval = function (str)
-  return Parser:new(exports.tokenize(str)):parse()
+exports.eval = function(str)
+  local parser = Parser:new(exports.tokenize(str))
+  return parser:parse()
 end
 
-exports.dump = table_print
+exports.dump = function(table)
+  local generator =Generator:new()
+  local result =generator:tablePrintValue(table)
+  result =trimBlankLine(result)
+  return result
+end
 
 return exports

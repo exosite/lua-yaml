@@ -10,7 +10,7 @@ Suite #292",
     ["family"] = "Dumars",
     ["given"] = "Chris"
   },
-  ["date"] = 980179200,
+  ["date"] = os.time{year=2001, month=1, day=23, hour=0, min=0, sec=0, isdst=false},
   ["invoice"] = 34843,
   ["ship-to"] = {
     ["address"] = {
