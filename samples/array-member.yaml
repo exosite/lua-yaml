@@ -1,0 +1,11 @@
+---
+arr:
+  - prop1:
+    subprop1: test
+    subprop2:
+      test2: test
+      test3: {}
+  - prop2:
+    subprop3: test.test
+  - prop3:
+    subprop4: 5
