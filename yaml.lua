@@ -137,7 +137,8 @@ local tokens = {
   {"string",    "^%b{} *[^,%c]+", noinline = true},
   {"{",         "^{"},
   {"}",         "^}"},
-  {"string",    "^%b[] *[^,%c]+", noinline = true},
+  {"string",    "^(%b[] *[^%c #]+[^%c]-) #[^\n]*", noinline = true}, -- Any letter/punctuation after '[...]', before '#' is string (after '#' comment)
+  {"string",    "^(%b[] *[^%c #]+[^%c]+)", noinline = true}, -- Any letter/punctuation after '[...]' is string
   {"[",         "^%["},
   {"]",         "^%]"},
   {"string",    "^-[^%s]+", noinline = true},
@@ -189,10 +190,11 @@ exports.tokenize = function (str)
           -- Trim
           token[2][1] = string_trim(token[2][1])
         elseif token[1] == "string" then
+          token[2][1] =string_trim(token[2][1])
           -- Finding numbers
-          local snip = token[2][1]
+          local snip = token[2][1]          
           if not token.force_text then
-            if snip:match("^(-?%d+%.%d+)[^\n]*") or snip:match("^(-?%d+)[^\n]*") then
+            if snip:match("^(-?%d+%.%d+)$") or snip:match("^(-?%d+)$") then
               token[1] = "number"
             end
           end

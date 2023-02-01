@@ -15,3 +15,12 @@ key6: 123 # Comment number
 key7:
   key8: value # Comment simple string
   key9: not#comments #Comment simple string with # inside and multiple # 
+
+key10: [1, 2]
+key11: [3, 4] it is another string # and after comment
+key12: [5, 6] StrinG # Another language comment: кирилица ёпрст
+key13: [7, 8]    
+key14: [9, 10] StrinG    # Comment with spaces and #more #more # comment
+key15: [11, 12] StrinG# notcomment # comment
+key16: [13, 14] #comment
+key17: [15, 16] string
