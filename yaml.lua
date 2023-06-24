@@ -107,7 +107,7 @@ local word = function(w) return "^("..w..")([%s$%c])" end
 
 local tokens = {
   {"yaml-version", "^%%YAML ([0-9%.]*)"},
-  {"comment",   "^[\n ]+#[^\n]*"},
+  {"comment",   "^[\n ]*#[^\n]*"},
   {"indent",    "^[\n]+( *)"},
   {"space",     "^ +"},
   {"true",      word("enabled"),  const = true, value = true},
