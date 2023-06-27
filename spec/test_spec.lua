@@ -52,7 +52,8 @@ describe('dump', function()
           "aother",
           {some=1, at=4}
         }
-      }}
+      }},
+      {b = {}},
     }
   }
   local str = yaml.dump(expected)
