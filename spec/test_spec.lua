@@ -29,7 +29,34 @@ describe('Parsing in', function()
     it(file, function()
       local data = yaml.eval(readAll("samples/"..file..".yaml"))
       local answer = require("samples."..file)
-      assert.are.same(answer, data)
+      if answer == 0 then
+        assert.is.Nil(data)
+      else
+        assert.are.same(answer, data)
+      end
     end)
   end
+end)
+
+describe('dump', function()
+  local expected = {
+    total = 3,
+    title = "very good!",
+    list = {
+      {item = "good", id = 3},
+      {item = "item2", id = 4, sub = {
+        no = 34,
+        te = "haha",
+        it = {
+          "this is false",
+          "aother",
+          {some=1, at=4}
+        }
+      }},
+      {b = {}},
+    }
+  }
+  local str = yaml.dump(expected)
+  local data = yaml.eval(str)
+  assert.are.same(expected, data)
 end)
